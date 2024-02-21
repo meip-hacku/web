@@ -1,10 +1,22 @@
+{% extends "base.html" %}
+
 {% block body %}
-<h2>Play</h2>
+<style>
+    .start-btn {
+        margin: 10px;
+    }
+</style>
+
+<div class="text-center">
+    <h2>Play</h2>
+</div>
 
 <img src="{{ url_for('play_bp.video_feed') }}" width=1080px>
 
 <div id="countdown"></div>
-<button id="startBtn">Start</button>
+<div class="text-center start-btn">
+    <button id="startBtn" type="button" class="btn btn-primary">Start</button>
+</div>
 
 <script src="{{ url_for('static', filename='js/script.js') }}"></script>
 

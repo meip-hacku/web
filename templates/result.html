@@ -1,19 +1,120 @@
+{% extends "base.html" %}
+
 {% block body %}
+<style>
+    .custom-container {
+        max-width: 80%;
+    }
+    .chart {
+        margin: 10%;
+    }
+</style>
 
-<h2>Result</h2>
+<div class="text-center">
+    <h2>Result</h2>
+</div>
 
-<p>label1</p>
-<p>{{ result[0] }}</p>
+<div class="container custom-container">
+    <div class="row">
+        <div class="col-md-6">
+            <canvas class="chart" id="label1" label="label1" value={{result[0]}} width="400" height="400"></canvas>
+        </div>
+        <div class="col-md-6">
+            <canvas class="chart" id="label2" label="label2" value={{result[1]}} width="400" height="400"></canvas>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6">
+            <canvas class="chart" id="label3" label="label3" value={{result[2]}} width="400" height="400"></canvas>
+        </div>
+        <div class="col-md-6">
+            <canvas class="chart" id="label4" label="label4" value={{result[3]}} width="400" height="400"></canvas>
+        </div>
+    </div>
+</div>
 
-<p>comment</p>
-<p> {{ result[4] }} </p>
-
-<button id="back">Back</button>
+<div class="container text-center">
+    <button id="back" type="button" class="btn btn-primary">Back</button>
+</div>
 
 <script>
 document.getElementById('back').addEventListener('click', function() {
     window.location.href='/play'
 });
+
+
+function createChart(id) {
+    const dom = document.getElementById(id);
+    var ctx = dom.getContext('2d');
+    var label = dom.getAttribute('label');
+    var value = dom.getAttribute('value');
+    return new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: [label, ''],
+            datasets: [{
+                label: '# of Votes',
+                data: [value, 100-value],
+                backgroundColor: [
+                    'rgba(255, 99, 132, 0.2)',
+                    'rgba(54, 162, 235, 0.2)',
+                    'rgba(255, 206, 86, 0.2)'
+                ],
+                borderColor: [
+                    'rgba(255, 99, 132, 1)',
+                    'rgba(54, 162, 235, 1)',
+                    'rgba(255, 206, 86, 1)'
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            scales: {
+                x: {
+                    display: false,
+                    grid: {
+                        display: false
+                    }
+                },
+                y: {
+                    display: false,
+                    beginAtZero: true,
+                    grid: {
+                        display: false
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: false
+                }
+            }
+        },
+        plugins: [{
+            id: 'customText',
+            afterDraw: (chart) => {
+                var width = chart.width,
+                    height = chart.height,
+                    ctx = chart.ctx;
+                ctx.restore();
+                var fontSize = (height / 150).toFixed(2);
+                ctx.font = fontSize + "em sans-serif";
+                ctx.textBaseline = "middle";
+                var text = label,
+                    textX = Math.round((width - ctx.measureText(text).width) / 2),
+                    textY = height / 2;
+                ctx.fillText(text, textX, textY);
+                ctx.save();
+                }
+            }]
+    });
+}
+
+createChart("label1");
+createChart("label2");
+createChart("label3");
+createChart("label4");
+
 </script>
 
 {% endblock %}

@@ -14,7 +14,7 @@ document.getElementById('startBtn').addEventListener('click', function() {
         } else if (count == -1) {
             countdown.textContent = ""
             clearInterval(interval);
-            let time = 30;
+            let time = 2;
             setInterval(function() {
                 time--;
                 if (time == 0) {

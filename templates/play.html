@@ -1,0 +1,11 @@
+{% block body %}
+<h2>Play</h2>
+
+<img src="{{ url_for('play_bp.video_feed') }}" width=1080px>
+
+<div id="countdown"></div>
+<button id="startBtn">Start</button>
+
+<script src="{{ url_for('static', filename='js/script.js') }}"></script>
+
+{% endblock %}

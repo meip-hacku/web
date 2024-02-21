@@ -1,0 +1,19 @@
+{% block body %}
+
+<h2>Result</h2>
+
+<p>label1</p>
+<p>{{ result[0] }}</p>
+
+<p>comment</p>
+<p> {{ result[4] }} </p>
+
+<button id=back">Back</button>
+
+<script>
+document.getElementById('back').addEventListener('click', function() {
+    window.location.href='/play'
+});
+</script>
+
+{% endblock

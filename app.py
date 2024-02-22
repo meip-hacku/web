@@ -1,12 +1,22 @@
 from flask import Flask
-from play import play_bp
+from flask_socketio import SocketIO
 
 app = Flask(__name__)
-app.register_blueprint(play_bp)
-
-@app.route('/')
-def hello_world():
-    return 'Hello World'
+socketio = SocketIO(app)
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    from play import play_bp, frame
+
+    app.register_blueprint(play_bp)
+    @app.route('/')
+    def hello_world():
+        return 'Hello World'
+
+    @socketio.on('frame')
+    def on_frame(data):
+        frame(data)
+
+    # app.run(debug=True)
+    # socketio.run(app, debug=False, ssl_context=('./server.crt', './server.key'))
+    # app.run(host='0.0.0.0', port=8000, debug=False, ssl_context=('./server.crt', './server.key'))
+    app.run(host='0.0.0.0', port=8000, debug=False)

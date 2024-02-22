@@ -4,6 +4,7 @@ import tensorflow as tf
 from app import socketio
 import numpy as np
 import base64
+import onnxruntime as ort
 
 play_bp = Blueprint('play_bp', __name__)
 model = 'static/models/movenet_lightning.tflite'
@@ -12,9 +13,18 @@ interpreter.allocate_tensors()
 input_details = interpreter.get_input_details()
 output_details = interpreter.get_output_details()
 
+
+class InputData:
+    def __init__(self):
+        self.data = np.random.rand(1, 0, 34).astype(np.float32)
+
+    def add(self, posedata):
+        self.data = np.append(self.data, [np.array(posedata.all).reshape(1, 34)], axis=1)
+
+
+input_data = InputData()
 class PoseData:
     def __init__(self, data):
-        self.data = data
         self.nose = (data[0][0], data[0][1])
         self.leftEye = (data[1][0], data[1][1])
         self.rightEye = (data[2][0], data[2][1])
@@ -33,36 +43,41 @@ class PoseData:
         self.leftAnkle = (data[15][0], data[15][1])
         self.rightAnkle = (data[16][0], data[16][1])
 
-def draw_dots(image, posedata):
-    dot_color = (0, 0, 255)
-    dot_radius = 10
-    height, width = image.shape[:2]
-    for loc in posedata.data:
-        x, y = int(loc[1] * width), int(loc[0] * height)
-        cv2.circle(image, (x, y), dot_radius, dot_color, -1)
-    return image
+        self.all = [data[i][j] for j in range(2) for i in range(17)]
+
 
 def infer(image):
     image_resized = cv2.resize(image, (input_details[0]['shape'][1], input_details[0]['shape'][2]))
     interpreter.set_tensor(input_details[0]['index'], [image_resized.astype('uint8')])
     interpreter.invoke()
     output_data = interpreter.get_tensor(output_details[0]['index'])
-    return PoseData(output_data[0][0])
+    return PoseData(output_data[0][0]) if output_data.any() else None
 
 
 @play_bp.route('/play')
 def play():
+    input_data.__init__()
     return render_template('play.html')
-
-@play_bp.route('/result')
-def result():
-    return render_template('result.html', result=[20, 30, 40, 50, "comment, comment, comment"])
 
 def frame(data):
     sbuf = base64.b64decode(data.split(',')[1])
     nparr = np.frombuffer(sbuf, np.uint8)
     frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-    output = infer(frame)
-    # frame = draw_dots(frame, output)
-    # ret, buffer = cv2.imencode('.jpg', frame)
-    # frame = buffer.tobytes()
+    posedata = infer(frame)
+    if posedata:
+        input_data.add(posedata)
+
+
+def get_score(_input_data):
+    sess = ort.InferenceSession('./model/sample/sample.onnx')
+    input_name = sess.get_inputs()[0].name
+    output_name = sess.get_outputs()[0].name
+    result = sess.run([output_name], {input_name: _input_data.data})
+    return (result[0][0] * 100).tolist()
+
+@play_bp.route('/result')
+def result():
+    print(input_data.data)
+    score = get_score(input_data)
+    print(score)
+    return render_template('result.html', result=score)

@@ -3,7 +3,6 @@ import cv2
 import tensorflow as tf
 import numpy as np
 import base64
-import onnxruntime as ort
 import time
 import analysis
 import openai
@@ -12,17 +11,6 @@ from dotenv import load_dotenv
 from flask_socketio import SocketIO
 import torch
 import random
-
-play_bp = Blueprint('play_bp', __name__)
-model = 'static/models/movenet_lightning.tflite'
-interpreter = tf.lite.Interpreter(model_path=model)
-interpreter.allocate_tensors()
-input_details = interpreter.get_input_details()
-output_details = interpreter.get_output_details()
-starting = False
-socket: SocketIO = None
-model: torch.nn.Module = None
-MAX_SEQ_LEN = 133
 
 
 def set_socket(s: SocketIO):
@@ -123,7 +111,6 @@ class InputData:
         return np.array(splitted_data).astype(np.float32)
 
 
-input_data = InputData()
 class PoseData:
     def __init__(self, data, embedding_info):
         self.data = data
@@ -159,6 +146,19 @@ class PoseData:
         self.data = np.array(self.data)
         self.data[:, 0] = self.data[:, 0] * self.embedding_info["target_w"] - self.embedding_info["x"]
         self.data[:, 1] = self.data[:, 1] * self.embedding_info["target_h"] - self.embedding_info["y"]
+
+
+play_bp = Blueprint('play_bp', __name__)
+model = 'static/models/movenet_lightning.tflite'
+interpreter = tf.lite.Interpreter(model_path=model)
+interpreter.allocate_tensors()
+input_details = interpreter.get_input_details()
+output_details = interpreter.get_output_details()
+starting = False
+socket: SocketIO = None
+model: torch.nn.Module = None
+input_data = InputData()
+MAX_SEQ_LEN = 133
 
 
 def resize_keep_aspect(image, target_size):
@@ -249,6 +249,7 @@ def padding_mask(lengths, max_len=None):
 def get_score(_input_data):
     model.eval()
     data = _input_data.get_splitted_data()
+    data = analysis.extract_features(data)
     lengths = [d.shape[0] for d in data]
     data = torch.tensor(data)
     padding_masks = padding_mask(torch.tensor(lengths, dtype=torch.int16), max_len=MAX_SEQ_LEN)
@@ -294,15 +295,20 @@ def get_comment(score):
 あなたの自己紹介は不要です。点数には言及しないでください。300文字程度で答えなさい。
 '''
     response = openai.ChatCompletion.create(
-                    model="gpt-3.5-turbo",
-                    messages=[
-                    {'role': 'user', 'content': prompt}],
-                    temperature=0.0,
+        model="gpt-3.5-turbo",
+        messages=[
+            {
+                'role': 'user',
+                'content': prompt
+            }
+        ],
+        temperature=0.0,
     )
 
     comment = response['choices'][0]['message']['content']
     print(comment)
     return comment
+
 
 @play_bp.route('/result')
 def result():
@@ -310,6 +316,7 @@ def result():
     # score = get_score(input_data)
     # print(score)
     return render_template('result.html')
+
 
 @play_bp.route('/start', methods=['POST'])
 def start():

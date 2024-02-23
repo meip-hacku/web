@@ -41,7 +41,7 @@ class Config:
 
 # Load the trained model
 config = Config()
-model = torch.jit.load('musclenet.pt')
+model = torch.jit.load('musclenet2.pt')
 model.eval()
 
 if __name__ == '__main__':
@@ -50,6 +50,7 @@ if __name__ == '__main__':
     set_model(model)
 
     app.register_blueprint(play_bp)
+
     @app.route('/')
     def hello_world():
         return 'Hello World'

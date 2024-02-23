@@ -103,6 +103,16 @@ class InputData:
         index = CSV_HEADER.index(header)
         return index
 
+    def get_splitted_data(self):
+        splitted_data = []
+        max_seq_len = max([s.shape[0] for s in self.splitted])
+        for i in range(len(self.splitted)):
+            s = self.splitted[i]
+            if s.shape[0] < max_seq_len:
+                s = np.append(s, np.zeros((max_seq_len - s.shape[0], 34)), axis=0)
+            splitted_data.append(s)
+        return np.array(splitted_data).astype(np.float32)
+
 
 input_data = InputData()
 class PoseData:
@@ -191,7 +201,7 @@ def play():
 
 
 def frame(data):
-    global starting
+    global starting, input_data
     if not starting:
         return
     sbuf = base64.b64decode(data.split(',')[1])
@@ -206,27 +216,37 @@ def frame(data):
         return
     if posedata:
         squat_flag = input_data.add(posedata)
-        if squat_flag and input_data.squat_count == 5:
-            socket.emit('finish', "")
+        if squat_flag:
+            socket.emit("squat", input_data.squat_count)
+            if input_data.squat_count == 5:
+                input_data.squat_count = 0
+                socket.emit('finish', "")
 
 
 def get_score(_input_data):
     sess = ort.InferenceSession('./model/sample/sample.onnx')
-    input_name = sess.get_inputs()[0].name
     output_name = sess.get_outputs()[0].name
-    result = sess.run([output_name], {input_name: _input_data.splitted})
-    print(result)
-    return (result[0][0] * 100).tolist()
+    input_name = sess.get_inputs()[0].name
+    __input_data = _input_data.get_splitted_data()  # (5, T, 34)
+    result = sess.run([output_name], {input_name: __input_data})  # (5, 4)
+
+    def sigmoid(x):
+        return 1 / (1 + np.exp(-x))
+
+    result = sigmoid(result)
+    result = np.mean(result, axis=1)  # (5, 4) -> (5, )
+    return (result * 100).tolist()
 
 
 @play_bp.route('/asyncResult', methods=['POST'])
 def async_result():
+    global input_data
     time.sleep(3)
-    score = [80, 23, 100, 49]
+    score = get_score(input_data)
     # comment = get_comment(score)
     return jsonify({
         "score": [80, 23, 100, 49],
-        "comment": "何らかのコメント"
+        "comment": "some comment"
     })
 
 
@@ -236,10 +256,10 @@ def get_comment(score):
 
     prompt = f'''
 あなたは筋トレトレーナーです。とあるトレーニーがスクワットを行ったところ、
-「膝が前に出過ぎていないか」が{score[0]}/100点,
-「腰を落とせているか」が{score[1]}/100点,
-「上体を起こし具合がちょうどいいか」が{score[2]}/100点,
-「きちんと胸を張れているかどうか」が{score[3]}/100点
+「膝の位置」が{int(score[0])}/100点,
+「腰を落とせているか」が{int(score[1])}/100点,
+「上体の起こし具合がちょうどいいか」が{int(score[2])}/100点,
+「きちんと胸を張れているかどうか」が{int(score[3])}/100点
 でした。この結果に対してフィードバックコメントをしてください。
 あなたの自己紹介は不要です。点数には言及しないでください。300文字程度で答えなさい。
 '''

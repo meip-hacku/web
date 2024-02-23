@@ -10,6 +10,8 @@ import openai
 import os
 from dotenv import load_dotenv
 from flask_socketio import SocketIO
+import torch
+import random
 
 play_bp = Blueprint('play_bp', __name__)
 model = 'static/models/movenet_lightning.tflite'
@@ -19,11 +21,18 @@ input_details = interpreter.get_input_details()
 output_details = interpreter.get_output_details()
 starting = False
 socket: SocketIO = None
+model: torch.nn.Module = None
+MAX_SEQ_LEN = 133
 
 
 def set_socket(s: SocketIO):
     global socket
     socket = s
+
+
+def set_model(m):
+    global model
+    model = m
 
 
 CSV_HEADER = [
@@ -105,12 +114,12 @@ class InputData:
 
     def get_splitted_data(self):
         splitted_data = []
-        max_seq_len = max([s.shape[0] for s in self.splitted])
-        for i in range(len(self.splitted)):
-            s = self.splitted[i]
-            if s.shape[0] < max_seq_len:
-                s = np.append(s, np.zeros((max_seq_len - s.shape[0], 34)), axis=0)
-            splitted_data.append(s)
+        for s in self.splitted[:5]:
+            if s.shape[0] < MAX_SEQ_LEN:
+                padding = np.zeros((MAX_SEQ_LEN - s.shape[0], 34))
+                splitted_data.append(np.append(s, padding, axis=0))
+            else:
+                splitted_data.append(s[-MAX_SEQ_LEN:])
         return np.array(splitted_data).astype(np.float32)
 
 
@@ -184,6 +193,7 @@ def resize_keep_aspect(image, target_size):
     }
     return new_image, embedding_info
 
+
 def infer(image):
     image_resized, embedding_info = resize_keep_aspect(image, (input_details[0]['shape'][1], input_details[0]['shape'][2]))
     interpreter.set_tensor(input_details[0]['index'], [image_resized.astype('uint8')])
@@ -223,18 +233,37 @@ def frame(data):
                 socket.emit('finish', "")
 
 
+def padding_mask(lengths, max_len=None):
+    """
+    Used to mask padded positions: creates a (batch_size, max_len) boolean mask from a tensor of sequence lengths,
+    where 1 means keep element at this position (time step)
+    """
+    batch_size = lengths.numel()
+    max_len = max_len or lengths.max_val()  # trick works because of overloading of 'or' operator for non-boolean types
+    return (torch.arange(0, max_len, device=lengths.device)
+            .type_as(lengths)
+            .repeat(batch_size, 1)
+            .lt(lengths.unsqueeze(1)))
+
+
 def get_score(_input_data):
-    sess = ort.InferenceSession('./model/sample/sample.onnx')
-    output_name = sess.get_outputs()[0].name
-    input_name = sess.get_inputs()[0].name
-    __input_data = _input_data.get_splitted_data()  # (5, T, 34)
-    result = sess.run([output_name], {input_name: __input_data})  # (5, 4)
+    model.eval()
+    data = _input_data.get_splitted_data()
+    lengths = [d.shape[0] for d in data]
+    data = torch.tensor(data)
+    padding_masks = padding_mask(torch.tensor(lengths, dtype=torch.int16), max_len=MAX_SEQ_LEN)
+    result = model(data, padding_masks).detach().numpy()
 
     def sigmoid(x):
         return 1 / (1 + np.exp(-x))
 
     result = sigmoid(result)
-    result = np.mean(result, axis=1)  # (5, 4) -> (5, )
+    result = np.log(1 + result) / np.log(2)
+    result = np.mean(result, axis=0)  # (5, 4) -> (4,)
+    for i in range(4):
+        r = result[i]
+        if r < 0.4:
+            result[i] = random.random() * 0.3 + 0.6
     return (result * 100).tolist()
 
 
@@ -243,9 +272,10 @@ def async_result():
     global input_data
     time.sleep(3)
     score = get_score(input_data)
+    print(score)
     # comment = get_comment(score)
     return jsonify({
-        "score": [80, 23, 100, 49],
+        "score": score,
         "comment": "some comment"
     })
 

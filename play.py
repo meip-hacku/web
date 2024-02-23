@@ -251,3 +251,9 @@ def result():
     print(score)
     comment = get_comment(score)
     return render_template('result.html', result=score + [comment])
+
+@play_bp.route('/start', methods=['POST'])
+def start():
+    global starting
+    starting = True
+    return "start"

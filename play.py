@@ -1,10 +1,11 @@
-from flask import Blueprint, render_template
+from flask import Blueprint, render_template, jsonify
 import cv2
 import tensorflow as tf
-from app import socketio
 import numpy as np
 import base64
 import onnxruntime as ort
+import time
+import analysis
 
 play_bp = Blueprint('play_bp', __name__)
 model = 'static/models/movenet_lightning.tflite'
@@ -12,72 +13,220 @@ interpreter = tf.lite.Interpreter(model_path=model)
 interpreter.allocate_tensors()
 input_details = interpreter.get_input_details()
 output_details = interpreter.get_output_details()
+starting = False
+
+CSV_HEADER = [
+    'nose(x)', 'nose(y)', 'left eye(x)', 'left eye(y)',
+    'right eye(x)', 'right eye(y)', 'left ear(x)', 'left ear(y)',
+    'right ear(x)', 'right ear(y)', 'left shoulder(x)', 'left shoulder(y)',
+    'right shoulder(x)', 'right shoulder(y)', 'left elbow(x)', 'left elbow(y)',
+    'right elbow(x)', 'right elbow(y)', 'left wrist(x)', 'left wrist(y)',
+    'right wrist(x)', 'right wrist(y)', 'left hip(x)', 'left hip(y)',
+    'right hip(x)', 'right hip(y)', 'left knee(x)', 'left knee(y)',
+    'right knee(x)', 'right knee(y)', 'left ankle(x)', 'left ankle(y)',
+    'right ankle(x)', 'right ankle(y)'
+]
 
 
 class InputData:
     def __init__(self):
-        self.data = np.random.rand(1, 0, 34).astype(np.float32)
+        self.data = np.zeros((0, 34)).astype(np.float32)
+        self.t = []
+        self.last_time = 0
+        self.last_splitted = 0.0
+        self.splitted = []
+        self.splitted_index = 0
+        self.squat_flag = False
+        self.squat_count = 0
+        self.standing_pose = None
+        self.first = True
 
-    def add(self, posedata):
-        self.data = np.append(self.data, [np.array(posedata.all).reshape(1, 34)], axis=1)
+    def add(self, posedata) -> bool:
+        # スクワットをしているフラグを返却
+        if self.first:
+            if posedata.score < 0.4:
+                return False
+            if analysis.estimate_standing(posedata):
+                print("Standing!!")
+                self.data = np.array(posedata.all).reshape(1, 34)
+                self.standing_pose = posedata
+                print(self.standing_pose.nose, self.standing_pose.rightAnkle, self.standing_pose.leftAnkle)
+                self.t = [0]
+                self.last_time = time.time()
+                self.last_splitted = time.time()
+                self.splitted_index = 0
+                self.first = False
+            return False
+
+        self.data = np.append(self.data, np.array(posedata.all).reshape(1, 34), axis=0)
+        # 経過した時間を記録しておく
+        t = time.time()
+        self.t.append(t - self.last_time)
+        self.last_time = t
+
+        # 立っているか
+        if analysis.estimate_squatting(posedata, self.standing_pose):
+            if not self.squat_flag:
+                self.squat_flag = True
+        elif analysis.estimate_standing(posedata) and t - self.last_splitted > 0.7:
+            if self.squat_flag:
+                self.squat_flag = False
+                self.squat_count += 1
+                self.splitted.append(self.data[self.splitted_index:])
+                self.splitted_index = len(self.data)
+                self.last_splitted = t
+                print(self.squat_count)
+                return True
+        return False
+
+    def __getitem__(self, header: str) -> np.ndarray:
+        i = self._header(header)
+        return self.data[:, i]
+
+    def __setitem__(self, header: str, value: np.ndarray):
+        i = self._header(header)
+        self.data[:, i] = value
+
+    def _header(self, header: str) -> int:
+        assert header in CSV_HEADER, f"Invalid header: {header}"
+        index = CSV_HEADER.index(header)
+        return index
 
 
 input_data = InputData()
 class PoseData:
-    def __init__(self, data):
-        self.nose = (data[0][0], data[0][1])
-        self.leftEye = (data[1][0], data[1][1])
-        self.rightEye = (data[2][0], data[2][1])
-        self.leftEar = (data[3][0], data[3][1])
-        self.rightEar = (data[4][0], data[4][1])
-        self.leftShoulder = (data[5][0], data[5][1])
-        self.rightShoulder = (data[6][0], data[6][1])
-        self.leftElbow = (data[7][0], data[7][1])
-        self.rightElbow = (data[8][0], data[8][1])
-        self.leftWrist = (data[9][0], data[9][1])
-        self.rightWrist = (data[10][0], data[10][1])
-        self.leftHip = (data[11][0], data[11][1])
-        self.rightHip = (data[12][0], data[12][1])
-        self.leftKnee = (data[13][0], data[13][1])
-        self.rightKnee = (data[14][0], data[14][1])
-        self.leftAnkle = (data[15][0], data[15][1])
-        self.rightAnkle = (data[16][0], data[16][1])
+    def __init__(self, data, embedding_info):
+        self.data = data
+        self.embedding_info = embedding_info
+        self.transform()
+        self.nose = (data[0][1], data[0][0])
+        self.leftEye = (data[1][1], data[1][0])
+        self.rightEye = (data[2][1], data[2][0])
+        self.leftEar = (data[3][1], data[3][0])
+        self.rightEar = (data[4][1], data[4][0])
+        self.leftShoulder = (data[5][1], data[5][0])
+        self.rightShoulder = (data[6][1], data[6][0])
+        self.leftElbow = (data[7][1], data[7][0])
+        self.rightElbow = (data[8][1], data[8][0])
+        self.leftWrist = (data[9][1], data[9][0])
+        self.rightWrist = (data[10][1], data[10][0])
+        self.leftHip = (data[11][1], data[11][0])
+        self.rightHip = (data[12][1], data[12][0])
+        self.leftKnee = (data[13][1], data[13][0])
+        self.rightKnee = (data[14][1], data[14][0])
+        self.leftAnkle = (data[15][1], data[15][0])
+        self.rightAnkle = (data[16][1], data[16][0])
 
-        self.all = [data[i][j] for j in range(2) for i in range(17)]
+        self.score = 0.0
+        for i in range(17):
+            self.score += data[i][2]
+        self.score /= 17.0
 
+        self.all = [data[i][j] for j in range(1, -1, -1) for i in range(17)]
+        self.probs = [data[i][2] for i in range(17)]
+
+    def transform(self):
+        self.data = np.array(self.data)
+        self.data[:, 0] = self.data[:, 0] * self.embedding_info["target_w"] - self.embedding_info["x"]
+        self.data[:, 1] = self.data[:, 1] * self.embedding_info["target_h"] - self.embedding_info["y"]
+
+
+def resize_keep_aspect(image, target_size):
+    h, w = image.shape[:2]
+    target_w, target_h = target_size
+    aspect = w / h
+    target_aspect = target_w / target_h
+    if aspect > target_aspect:
+        # calculate new image width and height
+        new_w = int(target_w)
+        new_h = int(target_w / aspect)
+    else:
+        new_w = int(target_h * aspect)
+        new_h = int(target_h)
+    # resize image
+    resized_image = cv2.resize(image, (new_w, new_h))
+    # create new image of desired size and color (black) for padding
+    new_image = np.zeros((target_h, target_w, 3), np.uint8)
+    # calculate x,y position where image should be placed
+    x = (target_w - new_w) // 2
+    y = (target_h - new_h) // 2
+    # copy resized image to new image
+    new_image[y:y + new_h, x:x + new_w] = resized_image
+    embedding_info = {
+        "x": x,
+        "y": y,
+        "new_w": new_w,
+        "new_h": new_h,
+        "target_w": target_w,
+        "target_h": target_h,
+        "aspect": aspect
+    }
+    return new_image, embedding_info
 
 def infer(image):
-    image_resized = cv2.resize(image, (input_details[0]['shape'][1], input_details[0]['shape'][2]))
+    image_resized, embedding_info = resize_keep_aspect(image, (input_details[0]['shape'][1], input_details[0]['shape'][2]))
     interpreter.set_tensor(input_details[0]['index'], [image_resized.astype('uint8')])
     interpreter.invoke()
     output_data = interpreter.get_tensor(output_details[0]['index'])
-    return PoseData(output_data[0][0]) if output_data.any() else None
+    return PoseData(output_data[0][0], embedding_info) if output_data.any() else None
 
 
 @play_bp.route('/play')
 def play():
+    global input_data, starting
+    starting = False
     input_data.__init__()
     return render_template('play.html')
 
+
 def frame(data):
+    global starting
+    if not starting:
+        return
     sbuf = base64.b64decode(data.split(',')[1])
     nparr = np.frombuffer(sbuf, np.uint8)
+    if nparr.shape[0] == 0:
+        return
     frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-    posedata = infer(frame)
+    try:
+        posedata = infer(frame)
+    except Exception as e:
+        print(e)
+        return
     if posedata:
-        input_data.add(posedata)
+        squat_flag = input_data.add(posedata)
+        if squat_flag:
+            pass
+            # score = get_score(input_data)
+            # print(score)
+            # emit('score', score)
 
 
 def get_score(_input_data):
     sess = ort.InferenceSession('./model/sample/sample.onnx')
     input_name = sess.get_inputs()[0].name
     output_name = sess.get_outputs()[0].name
-    result = sess.run([output_name], {input_name: _input_data.data})
+    result = sess.run([output_name], {input_name: _input_data.splitted})
+    print(result)
     return (result[0][0] * 100).tolist()
+
+
+@play_bp.route('/asyncResult', methods=['POST'])
+def async_result():
+    time.sleep(3)
+    return jsonify([80, 23, 100, 49])
+
 
 @play_bp.route('/result')
 def result():
-    print(input_data.data)
-    score = get_score(input_data)
-    print(score)
-    return render_template('result.html', result=score)
+    # print(input_data.data)
+    # score = get_score(input_data)
+    # print(score)
+    return render_template('result.html')
+
+
+@play_bp.route('/start', methods=['POST'])
+def start():
+    global starting
+    starting = True
+    return "start"

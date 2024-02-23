@@ -6,11 +6,12 @@ socketio = SocketIO(app)
 
 if __name__ == '__main__':
     from play import play_bp, frame
-
+    from flask import render_template
+    
     app.register_blueprint(play_bp)
     @app.route('/')
     def hello_world():
-        return 'Hello World'
+        return render_template('splash.html')
 
     @socketio.on('frame')
     def on_frame(data):

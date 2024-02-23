@@ -20,18 +20,18 @@
     </div>
     <div class="row">
         <div class="col-md-6">
-            <canvas class="chart" id="label1" label="label1" value={{result[0]}} width="400" height="400"></canvas>
+            <canvas class="chart" id="label1" label="膝の下がり" value={{result[0]}} width="400" height="400"></canvas>
         </div>
         <div class="col-md-6">
-            <canvas class="chart" id="label2" label="label2" value={{result[1]}} width="400" height="400"></canvas>
+            <canvas class="chart" id="label2" label="腰の下がり" value={{result[1]}} width="400" height="400"></canvas>
         </div>
     </div>
     <div class="row">
         <div class="col-md-6">
-            <canvas class="chart" id="label3" label="label3" value={{result[2]}} width="400" height="400"></canvas>
+            <canvas class="chart" id="label3" label="胴体の角度" value={{result[2]}} width="400" height="400"></canvas>
         </div>
         <div class="col-md-6">
-            <canvas class="chart" id="label4" label="label4" value={{result[3]}} width="400" height="400"></canvas>
+            <canvas class="chart" id="label4" label="胸の張り" value={{result[3]}} width="400" height="400"></canvas>
         </div>
     </div>
 </div>
@@ -68,14 +68,12 @@ function createChart(id) {
                 label: '# of Votes',
                 data: [value, 100-value],
                 backgroundColor: [
-                    'rgba(255, 99, 132, 0.2)',
-                    'rgba(54, 162, 235, 0.2)',
-                    'rgba(255, 206, 86, 0.2)'
+                    'rgba(255, 99, 132, 0.8)',
+                    'rgba(70, 70, 70, 0.2)',
                 ],
                 borderColor: [
                     'rgba(255, 99, 132, 1)',
-                    'rgba(54, 162, 235, 1)',
-                    'rgba(255, 206, 86, 1)'
+                    'rgba(70, 70, 70, 1)',
                 ],
                 borderWidth: 1
             }]
@@ -109,7 +107,7 @@ function createChart(id) {
                     height = chart.height,
                     ctx = chart.ctx;
                 ctx.restore();
-                var fontSize = (height / 150).toFixed(2);
+                var fontSize = (height / 180).toFixed(2);
                 ctx.font = fontSize + "em sans-serif";
                 ctx.textBaseline = "middle";
                 var text = label,

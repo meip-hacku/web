@@ -29,10 +29,24 @@ document.getElementById('startBtn').addEventListener('click', async function() {
             countdown.textContent = ""
             overlay.removeAttribute("class", "overlay");
             clearInterval(interval);
-            let time = 2;
+            let time = 30;
+            let audioPlaying = false;
+            let audioRandThreshold = 0.3;
+            let audioLen = 11;
             setInterval(function() {
                 time--;
-                if (time == 0) {
+                if (time > 0) {
+                    if (!audioPlaying && Math.random() < audioRandThreshold) {
+                        audioPlaying = true;
+                        var audioNum = Math.floor(Math.random() * audioLen);
+                        var audio = new Audio(`static/audio/good${String(audioNum).padStart(2, '0')}.wav`);
+                        audio.addEventListener('ended', function() {
+                            audioPlaying = false;
+                        });
+                        audio.play();
+                        console.log("audio");
+                    }
+                } else if (time == 0) {
                     countdown.textContent = "Stop!";
                     overlay.setAttribute("class", "overlay");
                     var audio = new Audio('static/audio/stop.mp3');

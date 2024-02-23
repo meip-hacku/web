@@ -4,19 +4,30 @@
     <link rel="icon" href="/static/img/favicon.png" type="image/png">
     <title>頑張りマッスル</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="./static/css/loader.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     {% block extendheader %}{% endblock %}
 </head>
 <body>
+<div class="loader-container">
+    <img src="./static/img/favicon.png" class="loader-logo" alt="Loading...">
+</div>
 
 <nav class="navbar navbar-expand-lg navbar-default bg-light">
     <div class="container-fluid">
-        <a class="navbar-brand" href="#">頑張りマッスル</a>
+        <a class="navbar-brand" href="/play">
+            <img src="./static/img/favicon.png" width="45px"/img>
+            頑張りマッスル
+        </a>
     </div>
 </nav>
 
 {% block body %}{% endblock %}
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
-
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    document.querySelector(".loader-container").style.display = 'none';
+});
+</script>
 </body>
-</html>
+</html> 

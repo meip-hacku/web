@@ -6,6 +6,9 @@ import base64
 import onnxruntime as ort
 import time
 import analysis
+import openai
+import os
+from dotenv import load_dotenv
 
 play_bp = Blueprint('play_bp', __name__)
 model = 'static/models/movenet_lightning.tflite'
@@ -217,16 +220,34 @@ def async_result():
     return jsonify([80, 23, 100, 49])
 
 
+def get_comment(score):
+    load_dotenv()
+    openai.api_key = os.environ.get('OPENAI_APIKEY')
+
+    prompt = f'''
+あなたは筋トレトレーナーです。とあるトレーニーがスクワットを行ったところ、
+「膝が前に出過ぎていないか」が{score[0]}/100点,
+「腰を落とせているか」が{score[1]}/100点,
+「上体を起こし具合がちょうどいいか」が{score[2]}/100点,
+「きちんと胸を張れているかどうか」が{score[3]}/100点
+でした。この結果に対してフィードバックコメントをしてください。
+あなたの自己紹介は不要です。点数には言及しないでください。300文字程度で答えなさい。
+'''
+    response = openai.ChatCompletion.create(
+                    model="gpt-3.5-turbo",
+                    messages=[
+                    {'role': 'user', 'content': prompt}],
+                    temperature=0.0,
+    )
+
+    comment = response['choices'][0]['message']['content']
+    print(comment)
+    return comment
+
 @play_bp.route('/result')
 def result():
-    # print(input_data.data)
-    # score = get_score(input_data)
-    # print(score)
-    return render_template('result.html')
-
-
-@play_bp.route('/start', methods=['POST'])
-def start():
-    global starting
-    starting = True
-    return "start"
+    print(input_data.data)
+    score = get_score(input_data)
+    print(score)
+    comment = get_comment(score)
+    return render_template('result.html', result=score + [comment])

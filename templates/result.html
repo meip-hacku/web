@@ -8,28 +8,76 @@
     .chart {
         margin: 10%;
     }
+    #wrapper-loading {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0);
+        z-index: 1000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    #loader-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background-color: white;
+        width: 100%;
+        height: 100%;
+    }
+    #loader-container img {
+        width: 300px;
+    }
+    #loader-container p {
+        margin-top: 20px;
+        font-size: 20px;
+    }
+
 </style>
+
+<div id='wrapper-loading'>
+    <div id="loader-container">
+        <img src="./static/img/favicon.png" class="loader-logo" alt="Loading...">
+        <p>お疲れ様でした．あなたのスクワットを解析中しています...</p>
+    </div>
+</div>
 
 <div class="text-center">
     <h2>Result</h2>
 </div>
 
 <div class="container custom-container">
+    <div class="center">
+        <h3>Chart</h3>
+    </div>
     <div class="row">
         <div class="col-md-6">
-            <canvas class="chart" id="label1" label="label1" value={{result[0]}} width="400" height="400"></canvas>
+            <canvas class="chart" id="label1" label="膝の位置" width="400" height="400"></canvas>
         </div>
         <div class="col-md-6">
-            <canvas class="chart" id="label2" label="label2" value={{result[1]}} width="400" height="400"></canvas>
+            <canvas class="chart" id="label2" label="腰の下がり" width="400" height="400"></canvas>
         </div>
     </div>
     <div class="row">
         <div class="col-md-6">
-            <canvas class="chart" id="label3" label="label3" value={{result[2]}} width="400" height="400"></canvas>
+            <canvas class="chart" id="label3" label="胴体の角度" width="400" height="400"></canvas>
         </div>
         <div class="col-md-6">
-            <canvas class="chart" id="label4" label="label4" value={{result[3]}} width="400" height="400"></canvas>
+            <canvas class="chart" id="label4" label="胸の張り" width="400" height="400"></canvas>
         </div>
+    </div>
+</div>
+
+<div class="container custom-container">
+    <div class="center">
+        <h3>Comment</h3>
+    </div>
+    <div class="center">
+        <p id='comment'></p>
     </div>
 </div>
 
@@ -43,11 +91,10 @@ document.getElementById('back').addEventListener('click', function() {
 });
 
 
-function createChart(id) {
+function createChart(id, value) {
     const dom = document.getElementById(id);
     var ctx = dom.getContext('2d');
     var label = dom.getAttribute('label');
-    var value = dom.getAttribute('value');
     return new Chart(ctx, {
         type: 'doughnut',
         data: {
@@ -56,14 +103,12 @@ function createChart(id) {
                 label: '# of Votes',
                 data: [value, 100-value],
                 backgroundColor: [
-                    'rgba(255, 99, 132, 0.2)',
-                    'rgba(54, 162, 235, 0.2)',
-                    'rgba(255, 206, 86, 0.2)'
+                    'rgba(255, 99, 132, 0.8)',
+                    'rgba(70, 70, 70, 0.2)',
                 ],
                 borderColor: [
                     'rgba(255, 99, 132, 1)',
-                    'rgba(54, 162, 235, 1)',
-                    'rgba(255, 206, 86, 1)'
+                    'rgba(70, 70, 70, 1)',
                 ],
                 borderWidth: 1
             }]
@@ -97,7 +142,7 @@ function createChart(id) {
                     height = chart.height,
                     ctx = chart.ctx;
                 ctx.restore();
-                var fontSize = (height / 150).toFixed(2);
+                var fontSize = (height / 180).toFixed(2);
                 ctx.font = fontSize + "em sans-serif";
                 ctx.textBaseline = "middle";
                 var text = label,
@@ -110,10 +155,26 @@ function createChart(id) {
     });
 }
 
-createChart("label1");
-createChart("label2");
-createChart("label3");
-createChart("label4");
+fetch("/asyncResult", {
+    method: "POST",
+    headers: {
+        "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+        "result": ""
+    }),
+}).then((response) => {
+    return response.json();
+}).then((data) => {
+    createChart("label1", data.score[0]);
+    createChart("label2", data.score[1]);
+    createChart("label3", data.score[2]);
+    createChart("label4", data.score[3]);
+    document.getElementById('comment').innerText = data.comment;
+    document.getElementById('wrapper-loading').style.display = 'none';
+}).catch((error) => {
+    console.error('Error:', error);
+});
 
 </script>
 

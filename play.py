@@ -231,6 +231,7 @@ def frame(data):
             if input_data.squat_count == 5:
                 input_data.squat_count = 0
                 socket.emit('finish', "")
+                starting = False
 
 
 def padding_mask(lengths, max_len=None):

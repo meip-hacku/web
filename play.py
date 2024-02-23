@@ -9,6 +9,7 @@ import analysis
 import openai
 import os
 from dotenv import load_dotenv
+from flask_socketio import SocketIO
 
 play_bp = Blueprint('play_bp', __name__)
 model = 'static/models/movenet_lightning.tflite'
@@ -17,6 +18,13 @@ interpreter.allocate_tensors()
 input_details = interpreter.get_input_details()
 output_details = interpreter.get_output_details()
 starting = False
+socket: SocketIO = None
+
+
+def set_socket(s: SocketIO):
+    global socket
+    socket = s
+
 
 CSV_HEADER = [
     'nose(x)', 'nose(y)', 'left eye(x)', 'left eye(y)',
@@ -198,11 +206,8 @@ def frame(data):
         return
     if posedata:
         squat_flag = input_data.add(posedata)
-        if squat_flag:
-            pass
-            # score = get_score(input_data)
-            # print(score)
-            # emit('score', score)
+        if squat_flag and input_data.squat_count == 5:
+            socket.emit('finish!', "")
 
 
 def get_score(_input_data):

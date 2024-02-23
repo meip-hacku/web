@@ -5,7 +5,8 @@ app = Flask(__name__)
 socketio = SocketIO(app)
 
 if __name__ == '__main__':
-    from play import play_bp, frame
+    from play import play_bp, frame, set_socket
+    set_socket(socketio)
 
     app.register_blueprint(play_bp)
     @app.route('/')

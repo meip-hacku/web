@@ -2,32 +2,11 @@
 
 {% block extendheader %}
 <script src="//cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port);
-        var video = document.querySelector('video');
-
-        navigator.mediaDevices.getUserMedia({ video: true })
-            .then(function(stream) {
-                video.srcObject = stream;
-                video.play();
-            });
-
-        video.addEventListener('play', function () {
-            var canvas = document.createElement('canvas');
-            (function loop() {
-                if (!video.paused && !video.ended) {
-                    canvas.width = video.videoWidth;
-                    canvas.height = video.videoHeight;
-                    canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
-                    var data = canvas.toDataURL('image/jpeg');
-                    socket.emit('frame', data);
-                    setTimeout(loop, 1000 / 30); // 30 fps
-                }
-            })();
-        });
-    });
-</script>
+<style>
+    #video {
+        transform: scaleX(-1);
+    }
+</style>
 {% endblock %}
 
 

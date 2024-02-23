@@ -68,13 +68,14 @@ document.addEventListener('DOMContentLoaded', function () {
                 })
                 // サーバーから終了の合図が来るのを検知
                 socket.on('finish', function() {
-                    countdown.textContent = "Finish!\nお疲れ様でした！";
+                    countdown.innerHTML = "Finish!<br />お疲れ様でした！";
+                    countdown.style.fontSize = "5em";
                     overlay.setAttribute("class", "overlay");
                     var audio = new Audio('static/audio/stop.mp3');
                     audio.play().catch(error => console.error("Playback failed:", error));
                     setTimeout(() => {
                         window.location.href = '/result';
-                    }, 2000);
+                    }, 5000);
                 })
             } else if (count == -1) {
                 countdown.textContent = ""

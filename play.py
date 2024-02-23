@@ -207,7 +207,7 @@ def frame(data):
     if posedata:
         squat_flag = input_data.add(posedata)
         if squat_flag and input_data.squat_count == 5:
-            socket.emit('finish!', "")
+            socket.emit('finish', "")
 
 
 def get_score(_input_data):
@@ -222,7 +222,12 @@ def get_score(_input_data):
 @play_bp.route('/asyncResult', methods=['POST'])
 def async_result():
     time.sleep(3)
-    return jsonify([80, 23, 100, 49])
+    score = [80, 23, 100, 49]
+    # comment = get_comment(score)
+    return jsonify({
+        "score": [80, 23, 100, 49],
+        "comment": "何らかのコメント"
+    })
 
 
 def get_comment(score):
@@ -251,11 +256,10 @@ def get_comment(score):
 
 @play_bp.route('/result')
 def result():
-    print(input_data.data)
-    score = get_score(input_data)
-    print(score)
-    comment = get_comment(score)
-    return render_template('result.html', result=score + [comment])
+    # print(input_data.data)
+    # score = get_score(input_data)
+    # print(score)
+    return render_template('result.html')
 
 @play_bp.route('/start', methods=['POST'])
 def start():

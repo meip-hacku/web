@@ -20,4 +20,4 @@ if __name__ == '__main__':
     # app.run(debug=True)
     # socketio.run(app, debug=False, ssl_context=('./server.crt', './server.key'))
     # app.run(host='0.0.0.0', port=8000, debug=False, ssl_context=('./server.crt', './server.key'))
-    app.run(host='0.0.0.0', port=8000, debug=False)
+    app.run(port=9000, debug=True)

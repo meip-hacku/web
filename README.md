@@ -1,4 +1,5 @@
 # 頑張りマッスル
+![image](./static/img/favicon.png)
 
 ## Requirements
 

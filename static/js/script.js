@@ -26,7 +26,7 @@ document.addEventListener('DOMContentLoaded', function () {
         let audioPlaying = false;
         let audioRandThreshold = 0.3;
         let audioLen = 11;
-        setInterval(function() {
+        const interval = setInterval(function() {
             if (!audioPlaying && Math.random() < audioRandThreshold) {
                 audioPlaying = true;
                 var audioNum = Math.floor(Math.random() * audioLen);
@@ -37,6 +37,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 audio.play();
             }
         }, 1000);
+        return interval;
     }
 
     const button = document.getElementById('startBtn')
@@ -48,6 +49,9 @@ document.addEventListener('DOMContentLoaded', function () {
         let count = 5;
         countdown.textContent = count;
         overlay.setAttribute("class", "overlay");
+        const countarea = document.getElementById('count-area');
+        const remainCount = document.getElementById('remain-count');
+        let interval2 = null;
         const interval = setInterval(function() {
             count--;
             if (count > 0) {
@@ -56,6 +60,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 countdown.textContent = "Start!"
                 var audio = new Audio('static/audio/start.mp3');
                 audio.play().catch(error => console.error("Playback failed:", error));
+                countarea.style.display = 'flex';
                 // 開始をサーバーに通知
                 fetch('/start', {
                     method: 'POST',
@@ -66,6 +71,10 @@ document.addEventListener('DOMContentLoaded', function () {
                         start: true
                     })
                 })
+                socket.on('squat', function(count) {
+                    if(count < 0) return;
+                    remainCount.textContent = 5 - count;
+                });
                 // サーバーから終了の合図が来るのを検知
                 socket.on('finish', function() {
                     countdown.innerHTML = "Finish!<br />お疲れ様でした！";
@@ -73,6 +82,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     overlay.setAttribute("class", "overlay");
                     var audio = new Audio('static/audio/stop.mp3');
                     audio.play().catch(error => console.error("Playback failed:", error));
+                    clearInterval(interval2);
                     setTimeout(() => {
                         window.location.href = '/result';
                     }, 5000);
@@ -81,7 +91,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 countdown.textContent = ""
                 overlay.removeAttribute("class", "overlay");
                 clearInterval(interval);
-                playing();
+                interval2 = playing();
             }
         }, 1000);
     });

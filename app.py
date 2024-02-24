@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, render_template
 from flask_socketio import SocketIO
 import torch
 from dataclasses import dataclass
@@ -48,12 +48,12 @@ if __name__ == '__main__':
     from play import play_bp, frame, set_socket, set_model
     set_socket(socketio)
     set_model(model)
-
+    
     app.register_blueprint(play_bp)
 
     @app.route('/')
     def hello_world():
-        return 'Hello World'
+        return render_template('splash.html')
 
     @socketio.on('frame')
     def on_frame(data):

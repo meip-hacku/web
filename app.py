@@ -48,7 +48,7 @@ if __name__ == '__main__':
     from play import play_bp, frame, set_socket, set_model
     set_socket(socketio)
     set_model(model)
-    
+
     app.register_blueprint(play_bp)
     @app.route('/')
     def hello_world():

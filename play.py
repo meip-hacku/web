@@ -275,9 +275,10 @@ def async_result():
     score = get_score(input_data)
     print(score)
     # comment = get_comment(score)
+    comment = "somecomment"
     return jsonify({
         "score": score,
-        "comment": "some comment"
+        "comment": comment
     })
 
 
@@ -307,9 +308,6 @@ def get_comment(score):
 
 @play_bp.route('/result')
 def result():
-    # print(input_data.data)
-    # score = get_score(input_data)
-    # print(score)
     return render_template('result.html')
 
 @play_bp.route('/start', methods=['POST'])

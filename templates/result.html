@@ -2,6 +2,16 @@
 
 {% block body %}
 <style>
+    #backBtn {
+        font-size: 20px;
+        margin-top: 20px;
+        padding: 10px 20px;
+        background-color: #ff69b4;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+    }
     .custom-container {
         max-width: 80%;
     }
@@ -82,11 +92,11 @@
 </div>
 
 <div class="container text-center">
-    <button id="back" type="button" class="btn btn-primary">Back</button>
+    <button id="backBtn" type="button" class="btn btn-primary">Back</button>
 </div>
 
 <script>
-document.getElementById('back').addEventListener('click', function() {
+document.getElementById('backBtn').addEventListener('click', function() {
     window.location.href='/play'
 });
 

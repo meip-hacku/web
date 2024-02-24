@@ -11,3 +11,35 @@
     font-size: 50px;
     color: white;
 }
+
+.container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh; /* 画面の高さに合わせる */
+}
+
+#logoImage {
+    max-width: 80%; /* コンテナより大きくならないようにする */
+    max-height: 80vh;
+    height: auto; /* アスペクト比を保持 */
+    
+    margin: 0 auto;
+    /* モバイルビューでの表示を最適化 */
+    @media (max-width: 768px) {
+        width: 60%; /* 画面幅の80%のサイズで表示 */
+        margin: 0 auto; /* 水平方向の中央揃え */
+    }
+}
+
+#splash-start {
+    max-width: 60%;
+    background-color: #2e3b72; /* 背景色 */
+    color: white; /* テキスト色 */
+    padding: 20px 12%; /* パディング */
+    margin: 8px 0; /* マージン */
+    border: none; /* ボーダーなし */
+    cursor: pointer; /* カーソルをポインタに */
+    border-radius: 12px; /* 角の丸み */
+    font-size: 40px;
+}

@@ -132,58 +132,57 @@ def angle_from_label(data, center_label: str, label_1: str, label_2: str) -> np.
     cos_theta = dot_product / (magnitude_1 * magnitude_2)
     angle = np.arccos(cos_theta)
 
+    if np.isnan(angle).any():
+        return np.zeros_like(angle)
     return angle
 
 
-def extract_features(data) -> np.ndarray:
-    nose_y = data["nose(y)"]  # the y-coordinate of the nose
+def extract_features(_data) -> np.ndarray:
+    new_data = []
+    for batch in range(_data.shape[0]):
+        data = _data[batch]
+        nose_y = data[:, CSV_HEADER.index("nose(y)")]
 
-    nose_left_shoulder_hip_angle = angle_from_label(data, "nose", "left shoulder", "left hip")
-    nose_right_shoulder_hip_angle = angle_from_label(data, "nose", "right shoulder", "right hip")
+        nose_left_shoulder_hip_angle = angle_from_label(data, "nose", "left shoulder", "left hip")
+        nose_right_shoulder_hip_angle = angle_from_label(data, "nose", "right shoulder", "right hip")
 
-    nose_left_hip_knee_angle = angle_from_label(data, "nose", "left hip", "left knee")
-    nose_right_hip_knee_angle = angle_from_label(data, "nose", "right hip", "right knee")
+        nose_left_hip_knee_angle = angle_from_label(data, "nose", "left hip", "left knee")
+        nose_right_hip_knee_angle = angle_from_label(data, "nose", "right hip", "right knee")
 
-    left_shoulder_hip_knee_angle = angle_from_label(data, "left shoulder", "left hip", "left knee")
-    right_shoulder_hip_knee_angle = angle_from_label(data, "right shoulder", "right hip", "right knee")
+        left_shoulder_hip_knee_angle = angle_from_label(data, "left shoulder", "left hip", "left knee")
+        right_shoulder_hip_knee_angle = angle_from_label(data, "right shoulder", "right hip", "right knee")
 
-    left_hip_knee_ankle_angle = angle_from_label(data, "left hip", "left knee", "left ankle")
-    right_hip_knee_ankle_angle = angle_from_label(data, "right hip", "right knee", "right ankle")
+        left_hip_knee_ankle_angle = angle_from_label(data, "left hip", "left knee", "left ankle")
+        right_hip_knee_ankle_angle = angle_from_label(data, "right hip", "right knee", "right ankle")
 
-    left_hip_x = data["left hip(x)"]
-    right_hip_x = data["right hip(x)"]
-    left_hip_y = data["left hip(y)"]
-    right_hip_y = data["right hip(y)"]
+        left_hip_x = data[:, CSV_HEADER.index("left hip(x)")]
+        right_hip_x = data[:, CSV_HEADER.index("right hip(x)")]
+        left_hip_y = data[:, CSV_HEADER.index("left hip(y)")]
+        right_hip_y = data[:, CSV_HEADER.index("right hip(y)")]
 
-    left_knee_x = data["left knee(x)"]
-    right_knee_x = data["right knee(x)"]
-    left_knee_y = data["left knee(y)"]
-    right_knee_y = data["right knee(y)"]
+        left_knee_x = data[:, CSV_HEADER.index("left knee(x)")]
+        right_knee_x = data[:, CSV_HEADER.index("right knee(x)")]
+        left_knee_y = data[:, CSV_HEADER.index("left knee(y)")]
+        right_knee_y = data[:, CSV_HEADER.index("right knee(y)")]
 
-    label = data["label"]
+        new_data.append(np.array([
+            nose_y,
+            nose_left_shoulder_hip_angle,
+            nose_right_shoulder_hip_angle,
+            nose_left_hip_knee_angle,
+            nose_right_hip_knee_angle,
+            left_shoulder_hip_knee_angle,
+            right_shoulder_hip_knee_angle,
+            left_hip_knee_ankle_angle,
+            right_hip_knee_ankle_angle,
+            left_hip_x,
+            right_hip_x,
+            left_hip_y,
+            right_hip_y,
+            left_knee_x,
+            right_knee_x,
+            left_knee_y,
+            right_knee_y
+        ]).T)
 
-    new_data = np.array([
-        nose_y,
-        nose_left_shoulder_hip_angle,
-        nose_right_shoulder_hip_angle,
-        nose_left_hip_knee_angle,
-        nose_right_hip_knee_angle,
-        left_shoulder_hip_knee_angle,
-        right_shoulder_hip_knee_angle,
-        left_hip_knee_ankle_angle,
-        right_hip_knee_ankle_angle,
-        left_hip_x,
-        right_hip_x,
-        left_hip_y,
-        right_hip_y,
-        left_knee_x,
-        right_knee_x,
-        left_knee_y,
-        right_knee_y,
-        label
-    ]).T
-
-    # if there is NaN in the data, remove the row
-    new_data = new_data[~np.isnan(new_data).any(axis=1)]
-
-    return new_data
+    return np.array(new_data)

@@ -228,7 +228,7 @@ def frame(data):
         squat_flag = input_data.add(posedata)
         if squat_flag:
             socket.emit("squat", input_data.squat_count)
-            if input_data.squat_count == 5:
+            if input_data.squat_count == 2:
                 input_data.squat_count = 0
                 socket.emit('finish', "")
                 starting = False
@@ -264,7 +264,7 @@ def get_score(_input_data):
     result = np.mean(result, axis=0)  # (5, 4) -> (4,)
     for i in range(4):
         r = result[i]
-        if r < 0.4:
+        if r < 0.0:
             result[i] = random.random() * 0.3 + 0.6
     return (result * 100).tolist()
 
@@ -275,10 +275,10 @@ def async_result():
     time.sleep(3)
     score = get_score(input_data)
     print(score)
-    # comment = get_comment(score)
+    comment = get_comment(score)
     return jsonify({
         "score": score,
-        "comment": "some comment"
+        "comment": comment
     })
 
 
